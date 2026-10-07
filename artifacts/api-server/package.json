@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "export NODE_ENV=development && pnpm run build && pnpm run start",
-    "build": "node ./build.mjs",
-    "start": "node --enable-source-maps ./dist/index.mjs",
+    "dev": "cd careersphere-backend && SPRING_PROFILES_ACTIVE=development mvn spring-boot:run",
+    "build": "cd careersphere-backend && mvn -DskipTests package",
+    "start": "cd careersphere-backend && java -jar target/careersphere-api.jar",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

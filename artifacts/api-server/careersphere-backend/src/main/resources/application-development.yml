@@ -1,0 +1,8 @@
+app:
+  security:
+    cookie-secure: false
+  cors:
+    allowed-origin-patterns: http://localhost:*,http://127.0.0.1:*,https://*.replit.dev
+spring:
+  jpa:
+    show-sql: false

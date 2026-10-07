@@ -2,21 +2,25 @@ openapi: 3.1.0
 info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
-  version: 0.1.0
-  description: API specification
+  version: 1.0.0
+  description: CareerSphere career and interview assistant API
 servers:
   - url: /api
     description: Base API path
 tags:
-  - name: health
-    description: Health operations
+  - name: auth
+  - name: users
+  - name: dashboard
+  - name: resumes
+  - name: jobs
+  - name: interviews
+  - name: study-plan
 paths:
   /healthz:
     get:
       operationId: healthCheck
-      tags: [health]
+      tags: [auth]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,7 +28,417 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Create an account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: Account created
+          headers:
+            Set-Cookie:
+              description: HttpOnly CareerSphere session JWT
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400": { $ref: "#/components/responses/ApiError" }
+        "409": { $ref: "#/components/responses/ApiError" }
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Sign in
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: Signed in
+          headers:
+            Set-Cookie:
+              description: HttpOnly CareerSphere session JWT
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401": { $ref: "#/components/responses/ApiError" }
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: End the current session
+      responses:
+        "200":
+          description: Session cookie cleared
+          headers:
+            Set-Cookie:
+              description: Expired CareerSphere session cookie
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+  /auth/csrf:
+    get:
+      operationId: getCsrfToken
+      tags: [auth]
+      responses:
+        "200":
+          description: CSRF token for browser mutation requests
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [token]
+                properties:
+                  token: { type: string }
+  /auth/change-password:
+    post:
+      operationId: changePassword
+      tags: [auth]
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChangePasswordInput"
+      responses:
+        "200":
+          description: Password changed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "400": { $ref: "#/components/responses/ApiError" }
+        "401": { $ref: "#/components/responses/ApiError" }
+  /users/me:
+    get:
+      operationId: getMyProfile
+      tags: [users]
+      security: [{ bearerAuth: [] }]
+      summary: Get the current user's profile
+      responses:
+        "200":
+          description: Profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+    put:
+      operationId: updateMyProfile
+      tags: [users]
+      security: [{ bearerAuth: [] }]
+      summary: Update the current user's profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProfileUpdate"
+      responses:
+        "200":
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserProfile"
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [dashboard]
+      security: [{ bearerAuth: [] }]
+      summary: Get dashboard metrics and recent activity
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Dashboard"
+  /resumes/upload:
+    post:
+      operationId: uploadResume
+      tags: [resumes]
+      security: [{ bearerAuth: [] }]
+      summary: Upload and assess a PDF resume
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: "#/components/schemas/ResumeUploadInput"
+      responses:
+        "201":
+          description: Resume and AI-based assessment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResumeDetail"
+        "400": { $ref: "#/components/responses/ApiError" }
+        "413": { $ref: "#/components/responses/ApiError" }
+  /resumes:
+    get:
+      operationId: listResumes
+      tags: [resumes]
+      security: [{ bearerAuth: [] }]
+      summary: List the current user's resumes
+      responses:
+        "200":
+          description: Resume list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ResumeSummary"
+  /resumes/{resumeId}:
+    get:
+      operationId: getResume
+      tags: [resumes]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ResumeId"
+      responses:
+        "200":
+          description: Resume details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResumeDetail"
+        "404": { $ref: "#/components/responses/ApiError" }
+  /resumes/{resumeId}/analysis:
+    get:
+      operationId: getResumeAnalysis
+      tags: [resumes]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/ResumeId"
+      responses:
+        "200":
+          description: AI-based resume assessment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResumeAnalysis"
+        "404": { $ref: "#/components/responses/ApiError" }
+  /resume-improvements:
+    post:
+      operationId: improveResumeSection
+      tags: [resumes]
+      security: [{ bearerAuth: [] }]
+      summary: Suggest an improved resume passage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResumeImprovementInput"
+      responses:
+        "200":
+          description: Original content and optional AI suggestion
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResumeImprovement"
+  /skills:
+    get:
+      operationId: listSkills
+      tags: [jobs]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Available skills
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Skill"
+  /job-roles:
+    get:
+      operationId: listJobRoles
+      tags: [jobs]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Supported job roles and skill requirements
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/JobRole"
+  /job-matches:
+    post:
+      operationId: matchJobRole
+      tags: [jobs]
+      security: [{ bearerAuth: [] }]
+      summary: Compare user skills against a target role
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobMatchInput"
+      responses:
+        "200":
+          description: Deterministic role skill match
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/JobMatch"
+  /interviews:
+    get:
+      operationId: listInterviews
+      tags: [interviews]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Interview history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/InterviewSummary"
+    post:
+      operationId: createInterview
+      tags: [interviews]
+      security: [{ bearerAuth: [] }]
+      summary: Start a mock interview
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InterviewCreateInput"
+      responses:
+        "201":
+          description: Interview session and first question
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewDetail"
+  /interviews/{interviewId}:
+    get:
+      operationId: getInterview
+      tags: [interviews]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/InterviewId"
+      responses:
+        "200":
+          description: Interview details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewDetail"
+        "404": { $ref: "#/components/responses/ApiError" }
+  /interviews/{interviewId}/answer:
+    post:
+      operationId: submitInterviewAnswer
+      tags: [interviews]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - $ref: "#/components/parameters/InterviewId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/InterviewAnswerInput"
+      responses:
+        "200":
+          description: Answer evaluation and next question, if any
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewAnswerResult"
+  /analytics:
+    get:
+      operationId: getInterviewAnalytics
+      tags: [interviews]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Interview performance metrics
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/InterviewAnalytics"
+  /study-plan:
+    get:
+      operationId: getStudyPlan
+      tags: [study-plan]
+      security: [{ bearerAuth: [] }]
+      responses:
+        "200":
+          description: Personalized roadmap and completion progress
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudyPlan"
+  /study-plan/topics/{topicId}:
+    put:
+      operationId: updateStudyTopic
+      tags: [study-plan]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: topicId
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/StudyTopicUpdate"
+      responses:
+        "200":
+          description: Updated topic
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StudyTopic"
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    ResumeId:
+      name: resumeId
+      in: path
+      required: true
+      schema: { type: integer }
+    InterviewId:
+      name: interviewId
+      in: path
+      required: true
+      schema: { type: integer }
+  responses:
+    ApiError:
+      description: Request failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ApiError"
   schemas:
     HealthStatus:
       type: object
@@ -33,4 +447,290 @@ components:
           type: string
       required:
         - status
+    ApiError:
+      type: object
+      required: [status, message, timestamp]
+      properties:
+        status: { type: integer }
+        message: { type: string }
+        timestamp: { type: string, format: date-time }
+        fieldErrors:
+          type: object
+          additionalProperties: { type: string }
+    MessageResponse:
+      type: object
+      required: [message]
+      properties:
+        message: { type: string }
+    UserProfile:
+      type: object
+      required: [id, fullName, email, experienceLevel, createdAt, skills]
+      properties:
+        id: { type: integer }
+        fullName: { type: string }
+        email: { type: string, format: email }
+        phone: { type: ["string", "null"] }
+        location: { type: ["string", "null"] }
+        education: { type: ["string", "null"] }
+        graduationYear: { type: ["integer", "null"] }
+        targetRole: { type: ["string", "null"] }
+        experienceLevel: { type: string }
+        skills:
+          type: array
+          items: { type: string }
+        githubUrl: { type: ["string", "null"], format: uri }
+        linkedinUrl: { type: ["string", "null"], format: uri }
+        createdAt: { type: string, format: date-time }
+    RegisterInput:
+      type: object
+      required: [fullName, email, password]
+      properties:
+        fullName: { type: string, minLength: 2, maxLength: 120 }
+        email: { type: string, format: email, maxLength: 254 }
+        password: { type: string, minLength: 10, maxLength: 72 }
+        phone: { type: string, maxLength: 30 }
+        location: { type: string, maxLength: 120 }
+        education: { type: string, maxLength: 180 }
+        graduationYear: { type: integer, minimum: 1980, maximum: 2100 }
+        targetRole: { type: string, maxLength: 120 }
+        experienceLevel: { type: string, enum: [Fresher, Entry-level, Mid-level] }
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string }
+    AuthResponse:
+      type: object
+      required: [user]
+      properties:
+        user: { $ref: "#/components/schemas/UserProfile" }
+    ChangePasswordInput:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword: { type: string }
+        newPassword: { type: string, minLength: 10, maxLength: 72 }
+    ProfileUpdate:
+      type: object
+      properties:
+        fullName: { type: string, minLength: 2, maxLength: 120 }
+        phone: { type: ["string", "null"], maxLength: 30 }
+        location: { type: ["string", "null"], maxLength: 120 }
+        education: { type: ["string", "null"], maxLength: 180 }
+        graduationYear: { type: ["integer", "null"], minimum: 1980, maximum: 2100 }
+        targetRole: { type: ["string", "null"], maxLength: 120 }
+        experienceLevel: { type: string, enum: [Fresher, Entry-level, Mid-level] }
+        skills:
+          type: array
+          items: { type: string, maxLength: 64 }
+        githubUrl: { type: ["string", "null"], format: uri }
+        linkedinUrl: { type: ["string", "null"], format: uri }
+    Dashboard:
+      type: object
+      required: [resumeAtsScore, resumesAnalyzed, interviewsCompleted, averageInterviewScore, targetRole, skillGaps, recommendedSkills, recentInterviews, assessmentMode]
+      properties:
+        resumeAtsScore: { type: ["integer", "null"] }
+        resumesAnalyzed: { type: integer }
+        interviewsCompleted: { type: integer }
+        averageInterviewScore: { type: ["number", "null"] }
+        targetRole: { type: ["string", "null"] }
+        skillGaps:
+          type: array
+          items: { type: string }
+        recommendedSkills:
+          type: array
+          items: { type: string }
+        recentInterviews:
+          type: array
+          items: { $ref: "#/components/schemas/InterviewSummary" }
+        assessmentMode: { type: string, enum: [DEMO, GEMINI] }
+    ResumeUploadInput:
+      type: object
+      required: [file, targetRole]
+      properties:
+        file:
+          type: string
+          format: binary
+        targetRole: { type: string, maxLength: 120 }
+    ResumeSummary:
+      type: object
+      required: [id, fileName, targetRole, createdAt, atsScore, overallScore, assessmentMode]
+      properties:
+        id: { type: integer }
+        fileName: { type: string }
+        targetRole: { type: string }
+        createdAt: { type: string, format: date-time }
+        atsScore: { type: integer }
+        overallScore: { type: integer }
+        assessmentMode: { type: string, enum: [DEMO, GEMINI] }
+    ResumeDetail:
+      allOf:
+        - $ref: "#/components/schemas/ResumeSummary"
+        - type: object
+          required: [analysis]
+          properties:
+            analysis: { $ref: "#/components/schemas/ResumeAnalysis" }
+    ResumeAnalysis:
+      type: object
+      required: [atsScore, overallScore, technicalSkills, softSkills, missingSkills, strengths, weaknesses, suggestions, recommendedTechnologies, recommendedRoles, keywords, projectSuggestions, assessmentMode]
+      properties:
+        atsScore: { type: integer, minimum: 0, maximum: 100 }
+        overallScore: { type: integer, minimum: 0, maximum: 100 }
+        technicalSkills: { type: array, items: { type: string } }
+        softSkills: { type: array, items: { type: string } }
+        missingSkills: { type: array, items: { type: string } }
+        strengths: { type: array, items: { type: string } }
+        weaknesses: { type: array, items: { type: string } }
+        suggestions: { type: array, items: { type: string } }
+        recommendedTechnologies: { type: array, items: { type: string } }
+        recommendedRoles: { type: array, items: { type: string } }
+        keywords: { type: array, items: { type: string } }
+        projectSuggestions: { type: array, items: { type: string } }
+        assessmentMode: { type: string, enum: [DEMO, GEMINI] }
+        assessmentNote: { type: ["string", "null"] }
+    ResumeImprovementInput:
+      type: object
+      required: [section, originalText, goal]
+      properties:
+        section: { type: string, enum: [SUMMARY, PROJECT, EXPERIENCE, BULLET] }
+        originalText: { type: string, minLength: 1, maxLength: 5000 }
+        goal: { type: string, maxLength: 240 }
+    ResumeImprovement:
+      type: object
+      required: [original, suggestion, assessmentMode]
+      properties:
+        original: { type: string }
+        suggestion: { type: string }
+        assessmentMode: { type: string, enum: [DEMO, GEMINI] }
+        assessmentNote: { type: ["string", "null"] }
+    Skill:
+      type: object
+      required: [name, category]
+      properties:
+        name: { type: string }
+        category: { type: string }
+    JobRole:
+      type: object
+      required: [id, name, requiredSkills]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        requiredSkills: { type: array, items: { type: string } }
+    JobMatchInput:
+      type: object
+      required: [role, skills]
+      properties:
+        role: { type: string }
+        skills: { type: array, items: { type: string } }
+    JobMatch:
+      type: object
+      required: [role, matchPercentage, matchingSkills, missingSkills, learningOrder]
+      properties:
+        role: { type: string }
+        matchPercentage: { type: integer }
+        matchingSkills: { type: array, items: { type: string } }
+        missingSkills: { type: array, items: { type: string } }
+        learningOrder: { type: array, items: { type: string } }
+    InterviewCreateInput:
+      type: object
+      required: [role, experienceLevel, difficulty, questionCount]
+      properties:
+        role: { type: string }
+        experienceLevel: { type: string, enum: [Fresher, Entry-level, Mid-level] }
+        difficulty: { type: string, enum: [Easy, Medium, Hard] }
+        questionCount: { type: integer, minimum: 3, maximum: 15 }
+    InterviewQuestion:
+      type: object
+      required: [id, questionNumber, category, prompt, answered]
+      properties:
+        id: { type: integer }
+        questionNumber: { type: integer }
+        category: { type: string }
+        prompt: { type: string }
+        answered: { type: boolean }
+        answer: { type: ["string", "null"] }
+        score: { type: ["number", "null"] }
+        technicalCorrectness: { type: ["number", "null"] }
+        completeness: { type: ["number", "null"] }
+        clarity: { type: ["number", "null"] }
+        relevance: { type: ["number", "null"] }
+        communication: { type: ["number", "null"] }
+        feedback: { type: ["string", "null"] }
+    InterviewSummary:
+      type: object
+      required: [id, role, difficulty, questionCount, answeredCount, status, createdAt]
+      properties:
+        id: { type: integer }
+        role: { type: string }
+        difficulty: { type: string }
+        questionCount: { type: integer }
+        answeredCount: { type: integer }
+        status: { type: string, enum: [IN_PROGRESS, COMPLETED] }
+        overallScore: { type: ["number", "null"] }
+        strengths: { type: array, items: { type: string } }
+        weaknesses: { type: array, items: { type: string } }
+        createdAt: { type: string, format: date-time }
+    InterviewDetail:
+      allOf:
+        - $ref: "#/components/schemas/InterviewSummary"
+        - type: object
+          required: [questions, assessmentMode]
+          properties:
+            experienceLevel: { type: string }
+            currentQuestionIndex: { type: integer }
+            questions: { type: array, items: { $ref: "#/components/schemas/InterviewQuestion" } }
+            assessmentMode: { type: string, enum: [DEMO, GEMINI] }
+            assessmentNote: { type: ["string", "null"] }
+    InterviewAnswerInput:
+      type: object
+      required: [questionId, answer]
+      properties:
+        questionId: { type: integer }
+        answer: { type: string, minLength: 1, maxLength: 6000 }
+    InterviewAnswerResult:
+      type: object
+      required: [evaluation, interview, completed]
+      properties:
+        evaluation: { $ref: "#/components/schemas/InterviewQuestion" }
+        interview: { $ref: "#/components/schemas/InterviewDetail" }
+        completed: { type: boolean }
+    InterviewAnalytics:
+      type: object
+      required: [averageScore, strongestTopic, weakestTopic, improvementTrend, scoreHistory]
+      properties:
+        averageScore: { type: number }
+        strongestTopic: { type: ["string", "null"] }
+        weakestTopic: { type: ["string", "null"] }
+        improvementTrend: { type: number }
+        scoreHistory:
+          type: array
+          items:
+            type: object
+            required: [date, score]
+            properties:
+              date: { type: string, format: date-time }
+              score: { type: number }
+    StudyPlan:
+      type: object
+      required: [targetRole, completionPercentage, topics]
+      properties:
+        targetRole: { type: string }
+        completionPercentage: { type: integer }
+        topics: { type: array, items: { $ref: "#/components/schemas/StudyTopic" } }
+    StudyTopic:
+      type: object
+      required: [id, week, title, description, completed, orderIndex]
+      properties:
+        id: { type: integer }
+        week: { type: integer }
+        title: { type: string }
+        description: { type: string }
+        completed: { type: boolean }
+        orderIndex: { type: integer }
+    StudyTopicUpdate:
+      type: object
+      required: [completed]
+      properties:
+        completed: { type: boolean }
 

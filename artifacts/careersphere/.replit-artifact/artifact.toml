@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "CareerSphere"
+description = "An AI-powered career and interview assistant for early-career software engineers, with secure accounts, resume assessment, role matching, interview practice, analytics, and a personalized study roadmap."
+version = "1.0.0"
+id = "artifacts/careersphere"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23128
+
+[services.development]
+run = "pnpm --filter @workspace/careersphere run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/careersphere", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/careersphere/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23128"
+BASE_PATH = "/"
